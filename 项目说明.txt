@@ -1,0 +1,141 @@
+使用 **`white0dew/XiaohongshuSkills`** 落地社团自动化发布的完整指南如下，包含设备要求、搭建步骤以及日常运行流程。
+
+---
+
+### 一、 需要什么设备支持？
+
+这个项目底层依赖 **Python + Playwright（或 Chrome 浏览器自动化）**，对算力要求极低，但对**网络环境与图形交互**有一定要求：
+
+| 方案 | 推荐指数 | 说明 |
+| :--- | :--- | :--- |
+| **方案 A：寝室/实验室的闲置电脑或笔记本（Win/Mac）** | **★★★★★（最推荐）** | **强烈推荐**。因为使用的是真实的校园网/家庭宽带 IP，小红书风控最松，且有可视化桌面，首次扫码登录或偶尔弹验证码时，人工介入最方便。 |
+| **方案 B：轻量云服务器（如腾讯云/阿里云 Windows/Linux 服务器）** | **★★★★☆** | 优点是可以 7×24 小时稳定开机。缺点是云厂商的公网机房 IP 风控相对严格，首次扫码登录需要配置桌面环境（VNC）或端口转发。 |
+
+* **基础环境要求**：
+  * 操作系统：Windows 10/11、macOS 或 Linux（带桌面环境更佳）
+  * Python 版本：**Python 3.10 及以上**
+  * 浏览器：本地安装了 Google Chrome 浏览器即可
+
+---
+
+### 二、 项目搭建步骤（保姆级）
+
+#### 1. 下载项目与安装依赖
+在电脑终端（Terminal 或 PowerShell）中依次运行以下命令：
+
+```bash
+# 1. 克隆代码仓库
+git clone https://github.com/white0dew/XiaohongshuSkills.git
+cd XiaohongshuSkills
+
+# 2. 安装 Python 核心依赖
+pip install -r requirements.txt
+
+# 3. 安装 Playwright 浏览器驱动
+playwright install chromium
+```
+
+#### 2. 首次运行：扫码登录与凭证持久化
+发布小红书需要创作者身份。第一次运行时，需要调出浏览器扫码登录一次，程序会自动将社团账号的 Cookies/会话缓存保存到本地目录（后续只要小红书不强制踢下线，通常 1~3 个月内无需重复登录）：
+
+```bash
+# 运行登录脚本（会自动弹出 Chrome 窗口打开小红书创作者服务平台）
+python scripts/cdp_publish.py login
+```
+* **操作**：在弹出的浏览器窗口中，用社团运营手机上的小红书 App **扫码登录**。
+* **确认**：进入创作者服务中心主页后，终端会提示登录成功并保存 Cookie，随后浏览器会自动关闭。
+
+---
+
+### 三、 编写社团定制化发布脚本（核心代码）
+
+针对逆光摄影社团的具体规则（文件名格式：`20260915_摄影师_图名（入选）.jpg`，文案模板固定），在项目根目录下新建一个名为 `club_auto_publish.py` 的脚本：
+
+```python
+import os
+import re
+from datetime import datetime
+# 导入 XiaohongshuSkills 核心发布模块
+from scripts.cdp_publish import publish_image_note
+
+def parse_filename(file_path):
+    """
+    根据社团规范解析照片信息：
+    例如：20260915_王璇_谁在树下弹吉他（入选）.jpg
+    """
+    filename = os.path.basename(file_path)
+    # 去除后缀
+    name_no_ext = os.path.splitext(filename)[0]
+    # 按照下划线拆分
+    parts = name_no_ext.split('_')
+    
+    date_str = parts[0]      # 20260915
+    photographer = parts[1]  # 王璇
+    # 去掉末尾的（入选）作为作品名
+    title = parts[2].replace('（入选）', '').replace('(入选)', '')
+    
+    return date_str, photographer, title
+
+def run_publish(image_path, quote=""):
+    """
+    执行社团标准格式发布
+    quote: 图说文案（可人工指定，或由大模型识图生成）
+    """
+    date_str, photographer, title = parse_filename(image_path)
+    
+    # 格式化日期：2026年9月15日
+    dt = datetime.strptime(date_str, "%Y%m%d")
+    date_formatted = f"{dt.year}年{dt.month}月{dt.day}日"
+
+    # 1. 标题标准写法
+    publish_title = f"《{title}》"
+    
+    # 2. 正文标准写法（注意末尾保留标签，white0dew 会自动识别并输入话题联想）
+    publish_content = f"""{quote}
+摄影师：{photographer}
+#电子科技大学 #逆光日记
+{date_formatted}"""
+
+    print(f"正在发布：{publish_title}")
+    
+    # 3. 调用发布组件
+    # 注意：首次测试建议在发布参数中传入 save_draft=True 先存为草稿测试
+    publish_image_note(
+        title=publish_title,
+        content=publish_content,
+        image_paths=[image_path],
+        # is_draft=True # 调试期间先存草稿，稳定后改成 False 正式发布
+    )
+    print("发布完成！")
+
+if __name__ == '__main__':
+    # 测试照片路径
+    test_pic = "./20260915_王璇_谁在树下弹吉他（入选）.jpg"
+    # 传入图说
+    test_quote = "你的笑脸拨动我的琴弦"
+    
+    run_publish(test_pic, test_quote)
+```
+
+---
+
+### 四、 搭建好后的日常使用工作流
+
+整个系统的落地可以分为三个阶段闭环运作：
+
+#### 1. 白天（收集阶段）：
+* 社员通过表单（如腾讯文档收集表）上传照片，填写摄影师名和作品名。
+* 表单收集的图片自动/手动下载到当天的文件夹中（如 `./20260915/`）。
+
+#### 2. 晚上 8:00（截稿与决策阶段）：
+* 8点截止后，主编在微信群和成员讨论挑选出一张最佳照片。
+* 主编将选中的图片文件名加上 `（入选）` 标识，并在群里敲定一句诗意图说（也可以由接入的 AI 视觉模型先生成 3 句备选供主编挑选）。
+
+#### 3. 晚上 8:30（全自动执行阶段）：
+* 脚本检测到当日文件夹里带有 `（入选）` 的照片。
+* **动作一（网盘备份）**：自动打包并同步至 123 网盘的「逆光日记」对应目录。
+* **动作二（小红书发布）**：脚本启动 `XiaohongshuSkills`，自动打开创作者平台、上传原图、填入《标题》、逐字填入 `#电子科技大学` 等话题标签、点击发布。
+* **动作三（群通知）**：发帖成功后，脚本在微信群发送提示：“今日逆光日记已发布/已存入草稿箱，请主编查看”。
+
+### 调试建议
+刚搭好后的**前 3~5 天**，务必将脚本设置为**“保存为草稿”**模式。由轮值主编在手机端打开小红书“草稿箱”看一眼，确认图片、标签 `#` 超链接、排版格式无误后，手动点击一下发布。待系统运行完全平稳后，再切换为全自动发布。

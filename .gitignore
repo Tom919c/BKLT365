@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# Local runtime configuration and secrets
+niguang365/config.json
+niguang365/web.local.json
+*.local.json
+.env
+.env.*
+
+# Local data, backups, databases and logs
+_sandbox/
+.workbuddy-ai/
+逆光365图片下载/
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+*.db
+*.log
+backups/
+staging/
+upload-manifests/
+
+# Office temporary files
+~$*
+*.tmp
+*.bak
+
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/

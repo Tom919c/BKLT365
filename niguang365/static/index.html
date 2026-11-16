@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#173f35">
+  <title>逆光365 · 轮值选图</title>
+  <link rel="stylesheet" href="/static/style.css?v=20261116d">
+</head>
+<body>
+  <section id="login-view" class="login-shell">
+    <div class="login-card">
+      <p class="eyebrow">NIGUANG 365</p>
+      <h1>逆光365</h1>
+      <p class="muted">轮值主编选图与发布预览</p>
+      <form id="login-form">
+        <label for="password">访问密码</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required autofocus>
+        <button type="submit" class="primary full">进入选图</button>
+      </form>
+      <p id="login-error" class="error" role="alert"></p>
+      <p class="hint">仅限授权主编使用，无需安装其他应用。</p>
+    </div>
+  </section>
+
+  <div id="app-view" hidden>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">NIGUANG 365</p>
+        <h1>轮值选图</h1>
+      </div>
+      <button id="logout" class="text-button" type="button">退出</button>
+    </header>
+
+    <main>
+      <section class="toolbar" aria-label="投稿工具">
+        <label class="date-label" for="date-select">投稿日期
+          <select id="date-select"></select>
+        </label>
+        <button id="sync" class="secondary" type="button">同步飞书</button>
+      </section>
+      <p id="status" class="status" role="status" aria-live="polite"></p>
+      <p class="hint">勾选后点击底部“保存并生成预览”。原图只读，不会被压缩或加水印。</p>
+
+      <section id="candidates" class="candidate-grid" aria-label="投稿照片"></section>
+
+      <section id="preview-section" hidden>
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">PREVIEW</p>
+            <h2>小红书发布预览</h2>
+          </div>
+        </div>
+        <p class="hint">保存后已生成文案预览。点击单篇按钮才会填入小红书后台，仍然不会点击发布。</p>
+        <div id="previews" class="preview-list"></div>
+      </section>
+    </main>
+
+    <footer class="submit-bar">
+      <strong id="selected-count">已选 0 张</strong>
+      <button id="submit" class="primary" type="button">保存并生成预览</button>
+    </footer>
+  </div>
+
+  <script src="/static/app.js?v=20261116d" defer></script>
+</body>
+</html>

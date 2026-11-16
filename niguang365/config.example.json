@@ -1,0 +1,27 @@
+{
+  "root": "<逆光365数据根>",
+  "repo": "<项目根>\\XiaohongshuSkills",
+  "python": "<Python 解释器路径>",
+  "account": null,
+  "roster": "<逆光365数据根>\\摄影师账号.csv",
+  "tags": ["#电子科技大学", "#逆光日记"],
+  "preview": true,
+  "post_time": null,
+  "feishu": {
+    "backend": "official",
+    "cli_path": "lark-cli",
+    "app_token": "<表格 token>",
+    "table_id": "<数据表 ID>",
+    "view_id": "<视图 ID>",
+    "name_field_id": "<姓名字段 ID>",
+    "title_field_id": "<图名字段 ID>",
+    "rename": "convention"
+  },
+  "pan123": {
+    "cdp_port": 9222,
+    "upload_timeout": 1800
+  },
+  "web": {
+    "preview_headless": true
+  }
+}
