@@ -36,7 +36,7 @@ py -3.13 -m venv .venv
 Copy-Item niguang365\config.example.json niguang365\config.json
 ```
 
-`config.example.json` 只含占位符；真实凭据只写入本机 `config.json`。`web.local.json` 由 `--init-auth` 生成，不要手工伪造。
+若 `config.json` 已存在，先备份再按需合并，**不要覆盖**现有真实配置。`config.example.json` 只含占位符；真实凭据只写入本机 `config.json`。`web.local.json` 由 `--init-auth` 生成，不要手工伪造。
 
 ### 2.2 关键字段
 
