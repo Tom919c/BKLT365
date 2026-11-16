@@ -4,7 +4,7 @@
 最后验证：2026-11-17
 适用：Windows 10/11 工作室电脑（本地部署）
 
-> 当前开发电脑只做代码级验证。本文中的电源策略、启动项、计划任务、Cloudflare Tunnel 服务、防火墙规则均为**部署清单**，不得在开发机擅自执行。
+> 2026-11-17 起，当前开发电脑经用户明确授权，已作为 `365.niguang.me` 的生产入口运行 v2，并配置了当前用户登录自启项。本文中的系统设置仅针对本机；其他电脑仍按工作室部署清单执行。
 
 ## 1. 运行前提
 
@@ -13,7 +13,7 @@
 | Windows | 10/11，建议常开、接通电源 |
 | Python | 3.11+；推荐 3.13 虚拟环境 |
 | 依赖 | `niguang365/requirements.txt` |
-| Chrome | 独立 `XiaohongshuProfile`，固定 CDP 端口 9222 |
+| Chrome | 独立 `XiaohongshuProfiles\default`，固定 CDP 端口 9222 |
 | 123 云盘 | 项目 Chrome 中已登录；年度根目录存在 |
 | 飞书 | 只读应用凭据/表格坐标；不需要写权限 |
 | 公网 | Cloudflare Tunnel：`365.niguang.me → 127.0.0.1:8501` |
@@ -87,7 +87,7 @@ $env:PYTHONPATH="D:\Code\VSCode\BKLT365"
 
 ```powershell
 & "C:\Program Files\Google\Chrome\Application\chrome.exe" `
-  --user-data-dir="$env:USERPROFILE\XiaohongshuProfile" `
+  --user-data-dir="$env:LOCALAPPDATA\Google\Chrome\XiaohongshuProfiles\default" `
   --remote-debugging-port=9222 `
   --remote-debugging-address=127.0.0.1
 ```
@@ -113,7 +113,7 @@ Invoke-RestMethod http://127.0.0.1:9222/json/list
 
 ## 6. Cloudflare Tunnel
 
-部署机（不是当前开发机）操作：
+当前生产机（本机）已由 `Cloudflared` 服务承载；新机部署时执行：
 
 ```powershell
 cloudflared tunnel login
@@ -141,17 +141,43 @@ cloudflared service install
 
 验收：外网手机打开 `https://365.niguang.me`，登录后可见工作台；直接访问公网 IP:8501 应超时。
 
-## 7. 开机自启与电源（部署机执行）
+## 7. 开机自启与电源（当前生产机已执行）
 
-Web 与项目 Chrome 必须由**同一个总开关**管理。建议用任务计划程序，在“用户登录时”启动：
+2026-11-17 经用户明确授权，本机使用**当前用户登录自启项**管理 Web 与项目 Chrome。计划任务 `Niguang365-Stack` 因当前执行令牌 `Access is denied`（`HRESULT 0x80070005`）未能创建，因此实际入口改为 HKCU Run；仍然是用户级的一套总开关。
 
-- Web：工作目录 `D:\Code\VSCode\BKLT365`，命令 `python -m niguang365.webapp --host 127.0.0.1 --port 8501`。
-- Chrome：上面的独立 profile + CDP 命令。
-- 电源：永不睡眠、合盖不睡眠、接通电源。
-- 防火墙：只允许本机/局域网访问 8501；公网仅经 Tunnel。
-- 执行前记录原设置，执行后按设置页清单逐项验证；不要静默修改。
+| 项目 | 当前值 |
+|---|---|
+| 自启注册值 | `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\Niguang365Stack` |
+| 自启命令 | `wscript.exe "D:\Code\VSCode\BKLT365\deploy\start-stack.vbs"` |
+| 启动器 | `deploy/start-stack.vbs` 隐藏调用 `start-web.ps1` 与 `start-chrome.ps1` |
+| Web | `http://127.0.0.1:8501`，日志在 `D:\逆光365图片下载\.niguang365\logs` |
+| Chrome | `%LOCALAPPDATA%\Google\Chrome\XiaohongshuProfiles\default`，CDP `127.0.0.1:9222` |
+| 自启总开关（设置页） | 已置为 `true`（仅记录部署状态，实际入口仍是本机 HKCU Run） |
 
-> 当前开发电脑不得修改电源策略、启动项、计划任务、Cloudflare Tunnel 服务。
+启动脚本行为：
+
+- `start-web.ps1` 先请求 `/api/health`；已健康则退出 0，不重复启动。
+- 8501 已监听但健康失败时退出 1，不盲目再起一个进程。
+- 否则隐藏启动 `python -m niguang365.webapp --host 127.0.0.1 --port 8501 --config ...`，日志按启动时间写入上述 logs 目录。
+- `start-chrome.ps1` 先检查 `/json/version`；9222 已健康则退出 0；否则用独立 profile 和 CDP 参数启动 Chrome。
+
+> 重要：`start-web.ps1` / `start-chrome.ps1` 含中文路径，文件必须保存为 **UTF-8 with BOM**。Windows PowerShell 5.1 会把无 BOM 的 UTF-8 中文路径读成乱码，表现为“Web 能起来，但日志目录不是预期路径”。
+
+停用自启：
+
+```powershell
+Remove-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name 'Niguang365Stack'
+```
+
+验证方式：注销并重新登录，或手动执行 `wscript.exe "D:\Code\VSCode\BKLT365\deploy\start-stack.vbs"` 后检查：
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8501/api/health
+Invoke-RestMethod http://127.0.0.1:9222/json/version
+Get-Content 'D:\逆光365图片下载\.niguang365\logs\autostart.log' -Tail 5
+```
+
+> 自启项只在当前用户登录后触发；机器重启但无人登录时，Web 不会启动。Cloudflared 是 Windows 服务，随系统启动。电源策略仍建议“永不睡眠、合盖不睡眠、接通电源”。
 
 ## 8. 备份
 
@@ -192,3 +218,18 @@ Copy-Item "D:\Code\VSCode\BKLT365\niguang365\config.json" "$backup\config.json"
 4. 公网单会话验收。
 5. 数据库/配置/周目录备份可恢复。
 6. 正式账号发布另行取得明确授权。
+
+## 11. 本次生产切换记录（2026-11-17）
+
+1. 备份旧 `niguang365\config.json` 到 `D:\逆光365图片下载\.niguang365\backups\config-before-v2-20261117-011530.json`。
+2. 将配置转换为 v2：`data_root=D:\逆光365图片下载`、`archive_parent=<data_root>\已归档`、`state_root=<data_root>\.niguang365`、`db_path=<state_root>\state\niguang365.sqlite3`、`fixed_tags=['#电子科技大学','#电子科技大学逆光摄影']`、`pan123.root_path=我的文件/逆光摄影工作室/逆光日记365/2026-2027`。
+3. 在 8599 端口以 v2 配置启动并验证 `/api/health` 返回 `{"ok":true,"name":"逆光365"}`；随后执行迁移干跑：2 个日目录、4 张照片、2 个组、2 个入选组、0 冲突。
+4. 执行 `--apply` 迁移：写入 2 组、复制 4 图；迁移备份在 `D:\逆光365图片下载\.niguang365\backups\migration-20261117-011616`，迁移前数据库为 `before-migration.sqlite3`。
+5. 生成周目录 `已归档\2026\20260914-0920`、`已归档\2026\20261116-1122`；旧 `已归档\2026\20260915` 与旧 `收件箱` 保留不删。
+6. 停止旧 `niguang365.web` 临时进程，启动 v2 到 8501；公网 `/api/health` 从旧 `{"ok":true,"service":"niguang365-web"}` 变为 `{"ok":true,"name":"逆光365"}`，公网首页返回 200。
+7. 用临时会话完成 `/api/dashboard`、`/api/weeks`、`/api/settings`、`/api/accounts` smoke；未使用用户密码。
+8. 迁移后真实周状态：`20261116=collecting`、`needs_sync=true`、1 组；`20260914=upload_blocked`、`needs_sync=true`、1 组（旧数据已入选但无新发布记录）。
+9. 摄影师账号 CSV 只有占位行 `陈权,请填小红书号`，已清空数据库映射为 0；需补真实小红书号后重新导入，文案才会出现 `姓名@小红书号`。
+10. 当前 Web/Chrome 由 HKCU Run 登录自启项管理，已实测停掉临时进程后可由 `start-stack.vbs` 在本地恢复 8501 与 9222；公网健康检查通过。
+
+尚未完成的生产验收：真实共享密码登录、真实飞书同步、小红书草稿/发布、123 上传、公网单会话。不要把本地 smoke 当成这些业务验收。

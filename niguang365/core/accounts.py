@@ -9,10 +9,12 @@ from pathlib import Path
 from typing import Iterable
 
 from .db import Database
+from .repo import Repository
 
 
 NAME_HEADERS = ("姓名", "摄影师", "name", "Name")
 HANDLE_HEADERS = ("小红书号", "小红书账号", "账号", "handle", "xiaohongshu", "小红书")
+PLACEHOLDER_HANDLES = {"请填小红书号", "待填写", "待补充", "无", "-"}
 
 
 class AccountCsvError(RuntimeError):
@@ -57,7 +59,7 @@ def read_accounts(path: Path) -> list[tuple[str, str]]:
         for row in reader:
             name = str(row.get(name_key, "")).strip()
             handle = str(row.get(handle_key, "")).strip()
-            if not name or not handle:
+            if not name or not handle or handle in PLACEHOLDER_HANDLES or "请填" in handle:
                 continue
             rows.append((name, handle))
     return rows
@@ -72,5 +74,5 @@ def import_accounts(db: Database, path: Path, state_root: Path) -> dict[str, obj
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     backup = backup_dir / f"photographer-accounts-{stamp}.csv"
     shutil.copy2(path, backup)
-    count = db.replace_accounts(accounts, source=str(path))
+    count = Repository(db).replace_accounts(accounts, source=str(path))
     return {"count": count, "backup": str(backup)}

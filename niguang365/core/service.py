@@ -1411,12 +1411,12 @@ class Service:
             },
             {
                 "item": "Web 自启动",
-                "action": "用任务计划程序在“用户登录时”启动 niguang365.webapp，工作目录设为仓库根目录。",
+                "action": "在当前用户登录自启项（HKCU Run / 启动文件夹 / 任务计划）启动 niguang365.webapp，工作目录设为仓库根目录。",
                 "verification": "注销并重新登录后 http://127.0.0.1:8501 可打开。",
             },
             {
                 "item": "Chrome/CDP",
-                "action": "用独立 XiaohongshuProfile 启动 Chrome，固定 --remote-debugging-port=9222，加入同一自启动任务。",
+                "action": "用独立 XiaohongshuProfiles\\default 启动 Chrome，固定 --remote-debugging-port=9222，加入同一自启项。",
                 "verification": "http://127.0.0.1:9222/json/version 返回浏览器版本。",
             },
             {

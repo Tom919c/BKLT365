@@ -372,6 +372,21 @@ class ServiceTests(unittest.TestCase):
         self.assertEqual(group.selected_date, date(2026, 11, 13))
         self.assertTrue(all("（1113入选）" in photo.path.name for photo in group.photos))
 
+    def test_import_accounts_replaces_mapping_and_backs_up_csv(self):
+        self.sync()
+        roster = self.fixture.base / "摄影师账号.csv"
+        roster.write_text(
+            "姓名,小红书号\n邝俊,UESTC_KUANG\n陈权,@chenquan\n李四,请填小红书号\n",
+            encoding="utf-8-sig",
+        )
+        self.service.config.roster_path = roster
+        result = self.service.import_accounts()
+        self.assertEqual(result["imported"], 2)
+        self.assertEqual(self.service.repo.get_account("邝俊"), "UESTC_KUANG")
+        self.assertEqual(self.service.repo.get_account("陈权"), "@chenquan")
+        self.assertIsNone(self.service.repo.get_account("李四"))
+        self.assertTrue(Path(result["backup"]).is_file())
+
     def test_create_note_topics_draft_and_publish(self):
         self.sync()
         self.service.select_group("rec-a", "2026-11-11")
