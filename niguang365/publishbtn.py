@@ -23,7 +23,8 @@ import websockets
 
 # 发布按钮：红色主按钮；同名 class 的白色按钮是「暂存离开」
 PUBLISH_BTN_CLASS = "bg-red"
-PUBLISH_BTN_TAG = "button"
+DRAFT_BTN_CLASS = "white"
+DRAFT_BTN_TAG = "button"
 
 # 自定义元素宿主
 HOST_TAG = "xhs-publish-btn"
@@ -122,6 +123,12 @@ def _attrs(node: dict) -> dict[str, str]:
     return dict(zip(raw[::2], raw[1::2]))
 
 
+def _node_text(node: dict) -> str:
+    if node.get("nodeName", "").lower() == "#text":
+        return node.get("nodeValue", "") or ""
+    return "".join(_node_text(child) for child in node.get("children", []) if isinstance(child, dict))
+
+
 def _to_rect(node: dict, model: dict) -> ButtonRect:
     quad = (model.get("border") or model.get("content") or [])[:]
     xs, ys = quad[0::2], quad[1::2]
@@ -135,7 +142,7 @@ def _to_rect(node: dict, model: dict) -> ButtonRect:
     )
 
 
-async def _find(session: _Session, want_class: str) -> tuple[ButtonRect, int] | None:
+async def _find(session: _Session, want_class: str, *, want_text: str | None = None) -> tuple[ButtonRect, int] | None:
     doc = await session.call("DOM.getDocument", {"depth": -1, "pierce": True})
     nodes: list[dict] = []
     _walk(doc["root"], nodes)
@@ -145,6 +152,7 @@ async def _find(session: _Session, want_class: str) -> tuple[ButtonRect, int] | 
         for n in nodes
         if n.get("nodeName", "").lower() == PUBLISH_BTN_TAG
         and want_class in (_attrs(n).get("class") or "")
+        and (not want_text or want_text in _node_text(n))
     ]
     if not candidates:
         return None
@@ -252,6 +260,63 @@ def click_publish(port: int = DEFAULT_PORT, *, settle_seconds: float = 5.0) -> d
                 "button": str(rect),
                 "node_id": node_id,
                 "page_state": state.get("result", {}).get("value"),
+            }
+
+    return asyncio.run(run())
+
+
+def click_save_draft(port: int = DEFAULT_PORT, *, settle_seconds: float = 3.0) -> dict:
+    """点击白色「暂存离开」按钮，把当前填写内容保存为独立草稿。"""
+
+    async def run() -> dict:
+        targets = _list_targets(port)
+        page = _pick_publish_page(targets)
+        if not page:
+            raise PublishButtonError("没有找到发布页")
+
+        async with _Session(page["webSocketDebuggerUrl"]) as session:
+            found = await _find(session, DRAFT_BTN_CLASS)
+            if not found:
+                raise PublishButtonError("未找到「暂存离开」按钮")
+            rect, node_id = found
+            cx, cy = rect.center
+
+            for event_type in ("mousePressed", "mouseReleased"):
+                await session.call(
+                    "Input.dispatchMouseEvent",
+                    {
+                        "type": event_type,
+                        "x": cx,
+                        "y": cy,
+                        "button": "left",
+                        "clickCount": 1,
+                    },
+                )
+                await asyncio.sleep(0.05)
+
+            await asyncio.sleep(settle_seconds)
+            state = await session.call(
+                "Runtime.evaluate",
+                {
+                    "expression": """
+                    (() => {
+                      const text = document.body ? document.body.innerText : '';
+                      return JSON.stringify({
+                        url: location.href,
+                        hasDraftHint: /已保存|草稿|暂存/.test(text),
+                        snippet: text.slice(0, 160).replace(/\\n+/g, ' | ')
+                      });
+                    })()
+                    """,
+                    "returnByValue": True,
+                },
+            )
+            return {
+                "clicked_at": [round(cx), round(cy)],
+                "button": str(rect),
+                "node_id": node_id,
+                "page_state": state.get("result", {}).get("value"),
+                "action": "save_draft",
             }
 
     return asyncio.run(run())

@@ -266,7 +266,8 @@ def publish_note(
     *,
     title: str,
     content: str,
-    image: str | Path,
+    image: str | Path | None = None,
+    images: list[str | Path] | None = None,
     preview: bool = True,
     headless: bool = True,
     account: str | None = None,
@@ -275,6 +276,9 @@ def publish_note(
     python: str | Path = DEFAULT_PYTHON,
     timeout: int = 600,
     require_login: bool = True,
+    save_draft: bool = False,
+    check_empty: bool = True,
+    port: int = 9222,
 ) -> PublishResult:
     """发布一篇图文笔记。
 
@@ -300,22 +304,29 @@ def publish_note(
     if require_login:
         from .logincheck import check as _probe
 
-        status = _probe()
+        status = _probe(port)
         if not status.logged_in:
             raise PublishError(
                 "小红书未登录，已中止发布。\n" + status.describe()
             )
 
-    ensure_empty_draft()
+    if not images:
+        images = [image] if image is not None else []
+    if not images:
+        raise PublishError("至少需要一张图片")
+
+    if check_empty:
+        ensure_empty_draft(port)
 
     repo = Path(repo)
     script = repo / "scripts" / "publish_pipeline.py"
     if not script.is_file():
         raise PublishError(f"找不到上游脚本：{script}")
 
-    image = Path(image).resolve()
-    if not image.is_file():
-        raise PublishError(f"图片不存在：{image}")
+    image_paths = [Path(item).resolve() for item in images]
+    for image_path in image_paths:
+        if not image_path.is_file():
+            raise PublishError(f"图片不存在：{image_path}")
 
     # 填表始终走 --preview。
     # 原因：上游的点击逻辑找不到发布按钮（按钮在 <xhs-publish-btn> 的
@@ -329,7 +340,7 @@ def publish_note(
         "--content",
         content,
         "--images",
-        str(image),
+        *[str(path) for path in image_paths],
         "--preview",
     ]
     if headless:
@@ -365,14 +376,27 @@ def publish_note(
         command=cmd,
     )
 
-    if not filled or preview:
+    if not filled:
+        return result
+
+    if preview:
+        if save_draft:
+            from .publishbtn import PublishButtonError, click_save_draft
+
+            try:
+                detail = click_save_draft(port)
+                result.clicked = True
+                result.click_detail = f"已点击暂存离开：{detail}"
+                result.page_state = detail.get("page_state")
+            except PublishButtonError as exc:
+                raise PublishError(f"填表成功但保存草稿失败：{exc}") from exc
         return result
 
     # 真正点发布
     from .publishbtn import PublishButtonError, click_publish
 
     try:
-        detail = click_publish()
+        detail = click_publish(port)
         result.clicked = True
         result.click_detail = str(detail)
         result.page_state = detail.get("page_state")

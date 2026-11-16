@@ -415,6 +415,188 @@ def open_login(port: int = 9222) -> str:
             return "请检查项目 Chrome 中的 123 云盘登录或验证页面。"
 
 
+def _create_folder(page, name: str, timeout: float = 20) -> None:
+    """在 123 云盘当前目录创建年度目录。
+
+    只在目标路径不存在时调用；页面结构变化时明确失败，不猜测点击。
+    """
+    deadline = time.monotonic() + timeout
+    clicked = False
+    for text in ("新建文件夹", "新建"):
+        button = page.get_by_text(text, exact=True)
+        if button.count():
+            button.first.click(timeout=8_000)
+            clicked = True
+            break
+    if not clicked:
+        raise Pan123Error(
+            f"云盘缺少目录 {name}，且未找到“新建文件夹”入口；请先在网页中创建年度根目录"
+        )
+    page.wait_for_timeout(800)
+    candidates = page.locator(
+        "input[placeholder*='文件夹'], input[placeholder*='名称'], input[type='text']"
+    )
+    if not candidates.count():
+        raise Pan123Error(f"新建目录 {name} 时未找到名称输入框")
+    candidates.last.fill(name)
+    for label in ("确定", "创建", "保存"):
+        button = page.get_by_text(label, exact=True)
+        if button.count():
+            button.first.click(timeout=8_000)
+            page.wait_for_timeout(1200)
+            if name in _page_names(page):
+                return
+            break
+    raise Pan123Error(f"新建目录 {name} 未在云盘列表中确认出现")
+
+
+def _enter_remote_path(page, root_path: str) -> str:
+    """从“我的文件”根目录逐层进入配置的年度目录。"""
+    parts = [part.strip() for part in str(root_path).replace("\\", "/").split("/") if part.strip()]
+    if parts and parts[0] in {"我的文件", "全部文件"}:
+        parts = parts[1:]
+    for part in parts:
+        _wait_for_file_list(page)
+        if part not in _page_names(page):
+            _create_folder(page, part)
+            _wait_entries(page, (part,), 30)
+        _open_named_entry(page, part)
+        page.wait_for_timeout(700)
+    return "/".join(parts)
+
+
+def upload_folder_to_root(
+    folder: str | Path,
+    root_path: str,
+    *,
+    port: int = 9222,
+    timeout: int = DEFAULT_TIMEOUT_SECONDS,
+    log: Callable[[str], None] = print,
+) -> UploadResult:
+    """先导航到配置的年度根目录，再整目录上传并核验。"""
+    manifest = inspect_folder(folder)
+    ensure(port)
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as p:
+        browser = _connect(p, port)
+        page = _get_page(browser)
+        page.goto(PAN123_HOME, wait_until="domcontentloaded", timeout=60_000)
+        _wait_for_login(page)
+        _wait_for_file_list(page)
+        remote_root = _enter_remote_path(page, root_path)
+        log(f"已进入云盘年度根目录：{remote_root}")
+
+        folder_name = manifest.path.name
+        changes: list[bool] = []
+        directory_input = page.locator(DIRECTORY_INPUT).first
+        if not directory_input.count():
+            raise Pan123Error("未找到 123 云盘的文件夹上传控件，页面结构可能已变化")
+
+        deadline = time.monotonic() + max(60, timeout)
+        already_exists = folder_name in _page_names(page)
+        if already_exists:
+            log("发现同名周目录，将只补充缺失文件，已有同名文件不动")
+        else:
+            log(f"创建并上传整个周目录：{folder_name}")
+            try:
+                directory_input.set_input_files(str(manifest.path), timeout=30_000)
+                changes.append(True)
+            except Exception as exc:  # noqa: BLE001
+                raise Pan123Error(f"文件夹提交给浏览器失败：{exc}") from exc
+            while folder_name not in _page_names(page):
+                _check_page_failure(page)
+                if time.monotonic() >= deadline:
+                    raise Pan123Error("等待云盘周目录出现超时；请检查传输任务后再重试")
+                page.wait_for_timeout(1000)
+
+        _open_named_entry(page, folder_name)
+        remaining = max(60, int(deadline - time.monotonic()))
+        count = _sync_remote_tree(page, manifest.path, remaining, log, changes)
+        log(f"云盘文件名、大小与目录结构核验通过：{count} 个文件")
+        return UploadResult(
+            folder=f"{remote_root}/{folder_name}",
+            file_count=count,
+            total_bytes=manifest.total_bytes,
+            uploaded=bool(changes),
+            remote_url=page.url,
+        )
+
+
+def delete_remote_files(
+    folder_name: str,
+    root_path: str,
+    names: list[str],
+    *,
+    port: int = 9222,
+    timeout: int = 300,
+    log: Callable[[str], None] = print,
+) -> list[str]:
+    """只删除明确列出的旧文件；返回已确认删除的名称。
+
+    跨周改名后只允许调用本函数处理上一版“未入选/入选”旧文件，
+    不允许按目录清空，也不允许通配删除。
+    """
+    if not names:
+        return []
+    ensure(port)
+    from playwright.sync_api import sync_playwright
+
+    deleted: list[str] = []
+    with sync_playwright() as p:
+        browser = _connect(p, port)
+        page = _get_page(browser)
+        page.goto(PAN123_HOME, wait_until="domcontentloaded", timeout=60_000)
+        _wait_for_login(page)
+        _wait_for_file_list(page)
+        _enter_remote_path(page, root_path)
+        if folder_name not in _page_names(page):
+            raise Pan123Error(f"云盘年度目录中找不到周目录：{folder_name}")
+        _open_named_entry(page, folder_name)
+        page.wait_for_timeout(800)
+        for name in names:
+            entries = page.locator(".table-file-name").filter(has_text=name)
+            exact = page.locator(".table-file-name").filter(
+                has_text=__import__("re").compile(rf"^{__import__('re').escape(name)}$")
+            )
+            node = exact.first if exact.count() else entries.first
+            if not node.count():
+                log(f"旧文件已不存在，视为清理完成：{name}")
+                deleted.append(name)
+                continue
+            row = node.locator(
+                "xpath=ancestor::*[contains(concat(' ', normalize-space(@class), ' '), "
+                "' editable-row ')][1]"
+            )
+            target = row.first if row.count() else node
+            target.hover()
+            clicked = False
+            for label in ("删除", "更多", "···"):
+                button = target.get_by_text(label, exact=True)
+                if not button.count():
+                    button = target.locator(f"[aria-label*='{label}'], [title*='{label}']")
+                if button.count():
+                    button.first.click(timeout=8_000)
+                    clicked = True
+                    if label == "删除":
+                        break
+                    page.wait_for_timeout(500)
+            if not clicked:
+                raise Pan123Error(f"找不到旧文件 {name} 的删除入口，已停止自动清理")
+            for label in ("确定", "删除"):
+                confirm = page.get_by_text(label, exact=True)
+                if confirm.count():
+                    confirm.last.click(timeout=8_000)
+                    break
+            page.wait_for_timeout(700)
+            if name not in _page_names(page):
+                deleted.append(name)
+            else:
+                raise Pan123Error(f"删除后仍在列表中：{name}")
+        log(f"已确认清理旧文件 {len(deleted)} 个")
+        return deleted
+
+
 def upload_folder(
     folder: str | Path,
     *,

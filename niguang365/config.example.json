@@ -1,27 +1,40 @@
 {
-  "root": "<逆光365数据根>",
-  "repo": "<项目根>\\XiaohongshuSkills",
-  "python": "<Python 解释器路径>",
+  "data_root": "D:\\逆光365图片下载",
+  "archive_parent": "D:\\逆光365图片下载\\已归档",
+  "state_root": "D:\\逆光365图片下载\\.niguang365",
+  "db_path": "D:\\逆光365图片下载\\.niguang365\\state\\niguang365.sqlite3",
+  "roster": "D:\\逆光365图片下载\\摄影师账号.csv",
+  "repo": "D:\\Code\\VSCode\\BKLT365\\XiaohongshuSkills",
+  "python": "C:\\Users\\<user>\\.venv\\Scripts\\python.exe",
   "account": null,
-  "roster": "<逆光365数据根>\\摄影师账号.csv",
-  "tags": ["#电子科技大学", "#逆光日记"],
-  "preview": true,
-  "post_time": null,
+  "fixed_tags": ["#电子科技大学", "#电子科技大学逆光摄影"],
+  "dynamic_topic_count": 3,
+  "max_topics": 10,
+  "day_baseline": "2022-11-15",
+  "cdp_port": 9222,
   "feishu": {
-    "backend": "official",
-    "cli_path": "lark-cli",
-    "app_token": "<表格 token>",
-    "table_id": "<数据表 ID>",
-    "view_id": "<视图 ID>",
-    "name_field_id": "<姓名字段 ID>",
-    "title_field_id": "<图名字段 ID>",
-    "rename": "convention"
+    "host": "https://<tenant>.feishu.cn",
+    "app_token": "<Base app token>",
+    "table_id": "<table id>",
+    "view_id": "<view id>",
+    "wiki_token": "",
+    "form_share_token": "",
+    "name_field_id": "fldzKqqKKW",
+    "title_field_id": "fldWYlP7uA",
+    "date_field_id": "fldClZDe0v",
+    "image_field_id": "fldf8LqT04",
+    "quote_field_id": "fldI8aQytg"
   },
   "pan123": {
-    "cdp_port": 9222,
+    "root_path": "我的文件/逆光摄影工作室/逆光日记365/2026-2027",
     "upload_timeout": 1800
   },
-  "web": {
-    "preview_headless": true
-  }
+  "upload": {
+    "weekday": 0,
+    "hour": 20,
+    "minute": 0,
+    "auto_start": false,
+    "root_path": "我的文件/逆光摄影工作室/逆光日记365/2026-2027"
+  },
+  "scheduler_enabled": true
 }

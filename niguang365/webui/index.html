@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f6f2ea">
+  <title>逆光365 · 工作台</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+
+  <section id="login" class="login-screen hidden">
+    <div class="login-visual">
+      <div class="brand-mark">逆光<span>365</span></div>
+      <p class="brand-en">BACKLIGHT · DAILY PHOTOGRAPHY</p>
+      <h1>把每天的逆光，<br>交到该被看见的人手里。</h1>
+      <p class="login-copy">投稿同步、按组入选、组稿预览、小红书草稿与 123 归档，都在这一处完成。</p>
+      <div class="visual-lines" aria-hidden="true"><i></i><i></i><i></i></div>
+    </div>
+    <form id="login-form" class="login-card">
+      <p class="eyebrow">轮值主编入口</p>
+      <h2>登录工作台</h2>
+      <label for="password">共享密码</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" placeholder="输入工作室共享密码" required>
+      <button class="btn primary wide" type="submit">进入工作台</button>
+      <p id="login-error" class="form-error" role="alert"></p>
+      <p class="login-note">同一时间只允许一个主编会话；新登录会让旧设备失效。</p>
+    </form>
+  </section>
+
+  <div id="app" class="app-shell hidden">
+    <header class="topbar">
+      <a class="wordmark" href="#week" aria-label="逆光365 首页">逆光<span>365</span></a>
+      <div class="topbar-meta">
+        <span id="week-chip" class="chip">本周</span>
+        <button id="logout-btn" class="btn ghost small" type="button">退出</button>
+      </div>
+    </header>
+
+    <nav class="tabs" aria-label="主功能">
+      <button class="tab active" data-tab="week" type="button">工作台</button>
+      <button class="tab" data-tab="notes" type="button">笔记</button>
+      <button class="tab" data-tab="upload" type="button">归档</button>
+      <button class="tab" data-tab="settings" type="button">设置</button>
+    </nav>
+
+    <main>
+      <section id="panel-week" class="panel active">
+        <div class="week-head">
+          <div>
+            <p class="eyebrow">当前周目录</p>
+            <h1 id="week-title">加载中</h1>
+            <p id="week-sub" class="muted"></p>
+          </div>
+          <div class="week-actions">
+            <label class="field compact">
+              <span>查看周</span>
+              <select id="week-select"></select>
+            </label>
+            <label class="field compact">
+              <span>入选日期</span>
+              <input id="publish-date" type="date">
+            </label>
+            <button id="sync-btn" class="btn primary" type="button">同步飞书</button>
+          </div>
+        </div>
+
+        <div id="week-stats" class="stat-row"></div>
+        <div id="week-alerts" class="alert-stack"></div>
+
+        <div class="section-head">
+          <div>
+            <h2>投稿组</h2>
+            <p class="muted">一条飞书记录为一组；组内全部图片一起入选，组间可合并为一篇笔记。</p>
+          </div>
+          <div id="selection-summary" class="selection-summary hidden"></div>
+        </div>
+
+        <div id="groups" class="group-grid"></div>
+        <div id="groups-empty" class="empty-state hidden">
+          <h3>这一周还没有同步投稿</h3>
+          <p>先点“同步飞书”，系统会按周建立目录，并把每条记录的全部图片下载到本地。</p>
+        </div>
+      </section>
+
+      <section id="panel-notes" class="panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">组稿与发布</p>
+            <h1>笔记</h1>
+            <p class="muted">先选组，再组稿；标题、正文、图片数、话题复核通过后才允许写草稿。</p>
+          </div>
+          <button id="new-note-btn" class="btn primary" type="button">用已选组组稿</button>
+        </div>
+        <div id="notes-list" class="note-list"></div>
+        <div id="notes-empty" class="empty-state hidden">
+          <h3>还没有笔记</h3>
+          <p>回到工作台勾选一个组，或把同主题的多个组合并成一篇。</p>
+        </div>
+      </section>
+
+      <section id="panel-upload" class="panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">周收束 · 123 云盘</p>
+            <h1>归档</h1>
+            <p class="muted">上一周结束后可收束并上传；失败会留痕，刷新不会消失。</p>
+          </div>
+          <div class="inline-actions">
+            <button id="close-week-btn" class="btn secondary" type="button">收束当前周</button>
+            <button id="upload-week-btn" class="btn primary" type="button">上传本周文件夹</button>
+          </div>
+        </div>
+        <div id="upload-alerts" class="alert-stack"></div>
+        <div id="upload-root" class="upload-root"></div>
+        <div id="upload-tasks" class="task-list"></div>
+      </section>
+
+      <section id="panel-settings" class="panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">部署与账号</p>
+            <h1>设置</h1>
+            <p class="muted">这里只改软件配置；本机电源、启动项和 Cloudflare 服务不会由网页修改。</p>
+          </div>
+          <button id="health-btn" class="btn secondary" type="button">检查连接</button>
+        </div>
+        <div id="health-box" class="alert-stack"></div>
+        <div class="settings-grid">
+          <form id="settings-form" class="card settings-card">
+            <h2>业务设置</h2>
+            <div id="path-list" class="path-list"></div>
+            <label class="field"><span>123 年度根目录</span><input name="pan123_root" type="text" placeholder="我的文件/逆光摄影工作室/逆光日记365/2026-2027"></label>
+            <div class="field-row">
+              <label class="field"><span>上传星期</span><select name="upload_weekday"><option value="0">周一</option><option value="1">周二</option><option value="2">周三</option><option value="3">周四</option><option value="4">周五</option><option value="5">周六</option><option value="6">周日</option></select></label>
+              <label class="field"><span>小时</span><input name="upload_hour" type="number" min="0" max="23"></label>
+              <label class="field"><span>分钟</span><input name="upload_minute" type="number" min="0" max="59"></label>
+            </div>
+            <label class="field"><span>固定标签（逗号分隔）</span><input name="fixed_tags" type="text" placeholder="#电子科技大学, #电子科技大学逆光摄影"></label>
+            <div class="field-row">
+              <label class="field"><span>动态话题数</span><input name="dynamic_topic_count" type="number" min="1" max="10"></label>
+              <label class="field"><span>话题总数上限</span><input name="max_topics" type="number" min="2" max="10"></label>
+            </div>
+            <label class="check"><input name="auto_start" type="checkbox"><span>部署总开关：Web 与项目 Chrome 开机自启（只记录清单，不在本机执行）</span></label>
+            <div class="publish-mode">
+              <label class="radio"><input type="radio" name="publish_mode" value="test"><span>测试账号发布</span></label>
+              <label class="radio"><input type="radio" name="publish_mode" value="official"><span>正式账号发布</span></label>
+            </div>
+            <label class="check"><input name="official_publish_authorized" type="checkbox"><span>本轮已取得正式账号发布授权</span></label>
+            <label class="field"><span>小红书账号备注</span><input name="xhs_account_label" type="text" placeholder="成电逆光摄影 / UESTC_BACKLIGHT"></label>
+            <button class="btn primary" type="submit">保存设置</button>
+            <p id="settings-msg" class="form-note"></p>
+          </form>
+
+          <div class="card settings-card">
+            <h2>共享密码</h2>
+            <form id="password-form" class="stack">
+              <label class="field"><span>当前密码</span><input name="current" type="password" autocomplete="current-password" required></label>
+              <label class="field"><span>新密码</span><input name="new" type="password" autocomplete="new-password" minlength="6" required></label>
+              <button class="btn secondary" type="submit">更换并接管当前会话</button>
+              <p id="password-msg" class="form-note"></p>
+            </form>
+            <hr>
+            <h2>摄影师账号映射</h2>
+            <p class="muted small">按姓名精确匹配；缺失映射只写姓名，不阻断发布。</p>
+            <div class="inline-actions">
+              <button id="accounts-btn" class="btn ghost" type="button">查看映射</button>
+              <button id="import-accounts-btn" class="btn secondary" type="button">从 CSV 导入</button>
+            </div>
+            <div id="accounts-box" class="account-list"></div>
+          </div>
+        </div>
+
+        <div class="card settings-card checklist-card">
+          <div class="section-head tight">
+            <div><h2>工作室部署清单</h2><p class="muted">这些动作需要在工作室电脑上由人执行，系统只在设置页记录。</p></div>
+            <span id="auto-status" class="pill neutral">未启用</span>
+          </div>
+          <div id="autostart-list" class="checklist"></div>
+        </div>
+
+        <div class="card settings-card">
+          <div class="section-head tight"><h2>最近审计</h2><button id="audit-btn" class="btn ghost small" type="button">刷新</button></div>
+          <div id="audit-list" class="audit-list"></div>
+        </div>
+      </section>
+    </main>
+
+    <div id="selection-bar" class="selection-bar hidden">
+      <div><strong id="selection-count">已选 0 组</strong><span id="selection-hint" class="muted small"></span></div>
+      <div class="inline-actions">
+        <button id="clear-selection" class="btn ghost small" type="button">清空</button>
+        <button id="compose-btn" class="btn primary" type="button">组稿</button>
+      </div>
+    </div>
+  </section>
+
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-card">
+      <header class="modal-head">
+        <div><p class="eyebrow" id="modal-eyebrow">操作</p><h2 id="modal-title">标题</h2></div>
+        <button class="icon-btn" type="button" data-close aria-label="关闭">×</button>
+      </header>
+      <div id="modal-body" class="modal-body"></div>
+      <footer id="modal-footer" class="modal-footer"></footer>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden" role="status"></div>
+  <script src="/app.js" defer></script>
+</body>
+</html>

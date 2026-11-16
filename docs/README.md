@@ -1,24 +1,26 @@
-# 文档索引
+# 逆光365 文档索引
 
-本目录用于承接《逆光365系统重构与软件工程化任务书》第 9 章要求的正式文档。当前先保留索引，后续按任务逐项补充。
+本目录面向三类读者：
 
-## 现有文档
+- **轮值主编**：先读 [主编用户手册](USER_GUIDE.md)。
+- **开发者/维护者**：读 [架构说明](ARCHITECTURE.md)、[配置与部署](DEPLOYMENT.md)、[API](API.md)、[测试报告](TEST_REPORT.md)。
+- **迁移与回滚**：读 [迁移与回滚](MIGRATION.md)。
 
-- [系统重构与软件工程化任务书](../逆光365系统重构与软件工程化任务书.docx)
-- [现状需求基线](../逆光365软件需求规格说明书_现状需求基线.docx)
-- [交接说明](../交接说明.md)
-- [现有应用说明](../niguang365/README.md)
+## 文档清单
 
-## 后续目录
+| 文档 | 用途 |
+|---|---|
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 目标架构、模块边界、状态机、数据模型、ADR |
+| [DEPLOYMENT.md](DEPLOYMENT.md) | 开发环境、Windows 工作室部署、Chrome/CDP、123、Tunnel、备份与故障恢复 |
+| [USER_GUIDE.md](USER_GUIDE.md) | 主编从同步到发布、收束、上传、跨周入选的完整操作手册 |
+| [API.md](API.md) | Web API 路由、权限、请求/响应约定 |
+| [MIGRATION.md](MIGRATION.md) | 旧收件箱/旧 JSON 迁移、干跑、冲突处理、回滚 |
+| [TEST_REPORT.md](TEST_REPORT.md) | 本轮代码级测试证据、覆盖范围、未执行的真实平台验收 |
+| [REQUIREMENTS_TRACEABILITY.md](REQUIREMENTS_TRACEABILITY.md) | 任务书 T-001—T-052 与实现、测试、文档的追踪 |
+| [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) | 移动优先界面、设计资源调研记录、状态与可访问性约定 |
 
-- `01_business/`：业务规则、需求追踪矩阵、冲突记录、现场验证证据。
-- `10_architecture/`：系统总览、数据字典、API、ADR。
-- `20_ops/`：部署、运行手册、工作室电脑设置清单、迁移与回滚。
-- `30_design/`：设计简报、设计来源与许可证、审查报告。
-- `40_user/`：主编手册、管理员手册、FAQ。
+## 文档维护规则
 
-## 写作约定
-
-- 每份文档标注版本、维护者、最后验证日期。
-- 命令与路径必须与当前仓库一致；历史路径需明确标注。
-- 不写入口令、Cookie、飞书凭据、浏览器登录态或真实投稿个人信息。
+- 业务规则变化时，同时更新 `ARCHITECTURE.md` 的状态机/数据契约、`USER_GUIDE.md` 的操作步骤、`REQUIREMENTS_TRACEABILITY.md` 和对应测试。
+- 不把真实密码、Cookie、飞书凭据、123 登录态、本机私密路径写入本目录。
+- 真实平台验收证据单独存放在受控位置；本目录只记录验证结论与限制。
