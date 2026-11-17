@@ -393,9 +393,15 @@
           },
         });
         closeModal();
-        await loadNotes();
         await openNote(note.id);
+        await loadNotes();
       } catch (error) {
+        if (error.message.includes("已被其他笔记占用")) {
+          closeModal();
+          try { await loadNotes(); } catch (_) {}
+          toast("该组已经生成过笔记，已刷新到笔记列表；请直接打开已有笔记");
+          return;
+        }
         toast(error.message, true);
       }
     };
