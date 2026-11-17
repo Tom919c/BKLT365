@@ -408,6 +408,20 @@ class ServiceTests(unittest.TestCase):
         self.assertEqual(len(adopted.photos), 2)
         self.assertTrue(all(not photo.token.startswith("legacy:") for photo in adopted.photos))
 
+    def test_list_notes_includes_groups_and_images(self):
+        self.sync()
+        self.service.select_group("rec-a", "2026-11-11")
+        self.service.create_note(
+            group_ids=["rec-a"],
+            title="你看你的我看我的",
+            publish_date="2026-11-11",
+            dynamic_topics=[],
+        )
+        listed = self.service.list_notes()
+        self.assertEqual(len(listed), 1)
+        self.assertEqual(len(listed[0]["groups"]), 1)
+        self.assertEqual(len(listed[0]["images"]), 2)
+
     def test_select_changes_all_group_files_and_keeps_quote(self):
         self.sync()
         result = self.service.select_group("rec-a", "2026-11-11")
@@ -621,6 +635,10 @@ class WebApiTests(unittest.TestCase):
         self.assertEqual(note.status_code, 200, note.text)
         note_id = note.json()["id"]
         self.assertEqual(self.client.get(f"/api/notes/{note_id}").status_code, 200)
+        listed = self.client.get("/api/notes")
+        self.assertEqual(listed.status_code, 200, listed.text)
+        self.assertEqual(len(listed.json()["notes"]), 1)
+        self.assertEqual(len(listed.json()["notes"][0]["groups"]), 1)
         settings = self.client.get("/api/settings")
         self.assertEqual(settings.status_code, 200)
         updated = self.client.put("/api/settings", json={"pan123_root": "我的文件/测试/2027-2028"})

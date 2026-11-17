@@ -855,7 +855,9 @@ class Service:
 
     def list_notes(self, limit: int = 50) -> list[dict[str, Any]]:
         notes = self.repo.list_notes(limit)
-        return [self.note_detail(note["id"], note=note, include_images=True) for note in notes]
+        # repo.list_notes 只返回 notes 表字段；页面渲染还需要 note_groups 和图片，
+        # 统一走 note_detail，避免直接读取 groups 时触发 KeyError。
+        return [self.note_detail(note["id"], include_images=True) for note in notes]
 
     def note_detail(self, note_id: str, *, note: dict[str, Any] | None = None, include_images: bool = True) -> dict[str, Any]:
         note = note or self._get_note(note_id)
