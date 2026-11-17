@@ -49,6 +49,7 @@ class FeishuConfig:
     image_field_id: str = ""
     quote_field_id: str = ""
     attachment_dir: str = ""
+    cli_path: str = "lark-cli"
 
     @classmethod
     def from_mapping(cls, payload: dict[str, Any]) -> "FeishuConfig":
@@ -80,6 +81,7 @@ class FeishuConfig:
             image_field_id=str(image_field_id or "fldf8LqT04"),
             quote_field_id=str(quote_field_id),
             attachment_dir=str(payload.get("attachment_dir", "")),
+            cli_path=str(payload.get("cli_path") or "lark-cli"),
         )
 
     def validate(self) -> None:

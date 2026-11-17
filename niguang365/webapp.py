@@ -82,7 +82,11 @@ def _create_adapters(config: AppConfig) -> tuple[Any, Any, Any, str]:
     feishu = None
     if config.feishu:
         try:
-            feishu = FeishuAdapter(config.feishu, config.staging_root)
+            feishu = FeishuAdapter(
+                config.feishu,
+                config.staging_root,
+                cli_path=config.feishu.cli_path,
+            )
         except Exception as exc:  # noqa: BLE001
             error = f"飞书适配器未就绪：{exc}"
     xhs = XhsAdapter(

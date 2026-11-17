@@ -456,7 +456,7 @@ class OfficialFeishuBase(FeishuBase):
             )
         except FileNotFoundError as exc:
             raise FeishuError(
-                "找不到 lark-cli，请先安装并确保当前飞书账号已连接"
+                f"找不到 lark-cli（{self.cli_path}），请先安装并在 config.json 配置 feishu.cli_path"
             ) from exc
         except subprocess.TimeoutExpired as exc:
             raise FeishuError(f"飞书官方接口调用超时：{cmd[2]}") from exc

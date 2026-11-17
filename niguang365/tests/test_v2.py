@@ -14,7 +14,7 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from niguang365.core.auth import AuthError, AuthManager
-from niguang365.core.config import AppConfig, DEFAULT_FIXED_TAGS
+from niguang365.core.config import AppConfig, DEFAULT_FIXED_TAGS, FeishuConfig
 from niguang365.core.domain import (
     FileItem,
     MergeGroup,
@@ -312,6 +312,22 @@ class DomainTests(unittest.TestCase):
                     items=items,
                     target_dir=root,
                 )
+
+
+class FeishuConfigTests(unittest.TestCase):
+    def test_cli_path_is_preserved(self):
+        config = FeishuConfig.from_mapping(
+            {
+                "host": "https://example.feishu.cn",
+                "app_token": "app",
+                "table_id": "table",
+                "cli_path": r"D:\逆光365图片下载\.niguang365\tools\lark-cli.exe",
+            }
+        )
+        self.assertEqual(
+            config.cli_path,
+            r"D:\逆光365图片下载\.niguang365\tools\lark-cli.exe",
+        )
 
 
 class ServiceTests(unittest.TestCase):

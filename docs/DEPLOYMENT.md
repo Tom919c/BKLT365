@@ -53,6 +53,7 @@ Copy-Item niguang365\config.example.json niguang365\config.json
 | `pan123.root_path` | 123 年度根路径 | `我的文件/逆光摄影工作室/逆光日记365/2026-2027` |
 | `upload.weekday/hour/minute` | 自动收束/上传 | `0 / 20 / 0`（周一 20:00） |
 | `feishu.*` | 飞书字段 ID | 姓名 `fldzKqqKKW`、图名 `fldWYlP7uA`、日期 `fldClZDe0v`、图片 `fldf8LqT04`、图说 `fldI8aQytg` |
+| `feishu.cli_path` | `lark-cli` 可执行文件绝对路径 | 不填则用 PATH 中的 `lark-cli`；当前生产机为 `D:\逆光365图片下载\.niguang365\tools\lark-cli.exe` |
 | `cdp_port` | Chrome CDP | 9222 |
 | `account` | 账号备注 | 可选 |
 
@@ -200,6 +201,7 @@ Copy-Item "D:\Code\VSCode\BKLT365\niguang365\config.json" "$backup\config.json"
 | 现象 | 检查 | 处理 |
 |---|---|---|
 | 页面打不开 | `Invoke-RestMethod http://127.0.0.1:8501/api/health` | 看 Web 进程/端口；重新启动 |
+| 同步飞书报 `找不到 lark-cli` | `Test-Path` 配置里的 `feishu.cli_path`；直接执行该 exe `base record-list` | 把 `lark-cli.exe` 复制到状态目录并在 `config.json` 配置绝对路径；不要只依赖登录自启进程的 PATH |
 | 登录后立刻失效 | 是否另一台设备登录 | 单会话设计；在新设备登录会撤销旧会话 |
 | 草稿失败 | CDP `/json/version`、创作者登录态 | 恢复 Chrome/CDP；重新生成草稿 |
 | 发布结果不确定 | 后台是否已有笔记 | 人工核对；不要重复点击 |
@@ -231,5 +233,6 @@ Copy-Item "D:\Code\VSCode\BKLT365\niguang365\config.json" "$backup\config.json"
 8. 迁移后真实周状态：`20261116=collecting`、`needs_sync=true`、1 组；`20260914=upload_blocked`、`needs_sync=true`、1 组（旧数据已入选但无新发布记录）。
 9. 摄影师账号 CSV 只有占位行 `陈权,请填小红书号`，已清空数据库映射为 0；需补真实小红书号后重新导入，文案才会出现 `姓名@小红书号`。
 10. 当前 Web/Chrome 由 HKCU Run 登录自启项管理，已实测停掉临时进程后可由 `start-stack.vbs` 在本地恢复 8501 与 9222；公网健康检查通过。
+11. 飞书同步曾报 `找不到 lark-cli`：原因是自启进程/Anaconda 手动进程的 PATH 里没有 Doubao 沙箱内的 `lark-cli.exe`，且 v2 的 `FeishuConfig` 原先未把 `cli_path` 传给 Web 适配器。已把 `lark-cli.exe` 固定到 `D:\逆光365图片下载\.niguang365\tools\lark-cli.exe`，在 `config.json` 写入 `feishu.cli_path`，并修复 `FeishuConfig -> FeishuAdapter -> OfficialFeishuBase` 的传递；真实只读验证返回 3 组、0 跳过。
 
 尚未完成的生产验收：真实共享密码登录、真实飞书同步、小红书草稿/发布、123 上传、公网单会话。不要把本地 smoke 当成这些业务验收。
