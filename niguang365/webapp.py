@@ -135,6 +135,13 @@ def create_app(
     app.state.auth = auth
     app.state.scheduler = scheduler
 
+    @app.middleware("http")
+    async def ui_no_cache(request: Request, call_next):
+        response = await call_next(request)
+        if request.url.path in {"/", "/index.html", "/app.js", "/styles.css"}:
+            response.headers["Cache-Control"] = "no-store"
+        return response
+
     @app.exception_handler(ServiceError)
     async def service_error_handler(request: Request, exc: ServiceError):
         return JSONResponse(
