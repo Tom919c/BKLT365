@@ -465,11 +465,19 @@ class OfficialFeishuBase(FeishuBase):
             payload = json.loads(proc.stdout or "")
         except json.JSONDecodeError as exc:
             detail = (proc.stderr or proc.stdout or "")[:300]
+            if "parse temporary token" in detail:
+                raise FeishuError(
+                    "飞书临时认证已过期：当前 Web 进程没有可刷新 token；请配置持久飞书认证后重试"
+                ) from exc
             raise FeishuError(f"飞书官方接口返回非 JSON：{detail}") from exc
 
         if proc.returncode != 0 or not payload.get("ok", False):
             error = payload.get("error") or {}
             detail = error.get("message") or proc.stderr or proc.stdout
+            if "parse temporary token" in str(detail):
+                raise FeishuError(
+                    "飞书临时认证已过期：当前 Web 进程没有可刷新 token；请配置持久飞书认证后重试"
+                )
             raise FeishuError(f"飞书官方接口调用失败：{detail}")
         return payload
 

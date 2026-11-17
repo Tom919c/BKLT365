@@ -31,7 +31,8 @@ from niguang365.core.domain import (
     week_for,
 )
 from niguang365.core.scheduler import UploadScheduler
-from niguang365.core.service import Service, StateError
+from niguang365.core.service import PlatformError, Service, StateError
+from niguang365.feishu import FeishuError
 from niguang365.webapp import create_app
 
 
@@ -356,6 +357,16 @@ class ServiceTests(unittest.TestCase):
         self.assertIn("第二行图说", group["quote"])
         names = [photo["name"] for photo in group["photos"]]
         self.assertEqual(names, ["20261109_邝俊_你看你的我看我的1.jpg", "20261109_邝俊_你看你的我看我的2.jpg"])
+
+    def test_sync_auth_failure_returns_platform_error(self):
+        class FailingFeishu:
+            def fetch_groups(self, week):
+                raise FeishuError("飞书临时认证已过期")
+
+        self.service.feishu = FailingFeishu()
+        with self.assertRaises(PlatformError) as caught:
+            self.sync()
+        self.assertIn("飞书同步失败", str(caught.exception))
 
     def test_sync_adopts_migrated_group_with_legacy_tokens(self):
         week = self.service._ensure_week(week_for(date(2026, 11, 9)))

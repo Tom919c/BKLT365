@@ -44,6 +44,7 @@ from .domain import (
     week_for,
 )
 from .repo import Group, Photo, Repository, WeekRecord, new_id
+from ..feishu import FeishuError
 
 
 class ServiceError(RuntimeError):
@@ -262,7 +263,10 @@ class Service:
             raise PlatformError("飞书适配器未配置")
         week = self.week_from_value(week_value)
         record = self._ensure_week(week)
-        report = self.feishu.fetch_groups(week)
+        try:
+            report = self.feishu.fetch_groups(week)
+        except FeishuError as exc:
+            raise PlatformError(f"飞书同步失败：{exc}") from exc
         summary = {
             "week": week.label,
             "total_records": report.total_records,
