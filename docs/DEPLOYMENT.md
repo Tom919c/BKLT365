@@ -162,6 +162,8 @@ cloudflared service install
 - 否则隐藏启动 `python -m niguang365.webapp --host 127.0.0.1 --port 8501 --config ...`，日志按启动时间写入上述 logs 目录。
 - `start-chrome.ps1` 先检查 `/json/version`；9222 已健康则退出 0；否则用独立 profile 和 CDP 参数启动 Chrome。
 
+> 飞书 CLI 的临时认证：`start-web.ps1` 会读取 `state_root\tools\cli-env.json` 注入 `lark-cli` 运行环境，这只是本机过渡验证方案。豆包 Agent 下发的 `DOUBAO_OFFICE_CLI_TOKEN` 是一次性/短时 token，不能作为长期生产认证；生产环境必须配置持久飞书应用凭据或已完成 OAuth 的 CLI profile。不要提交、打印或复制该文件中的 token。
+
 > 重要：`start-web.ps1` / `start-chrome.ps1` 含中文路径，文件必须保存为 **UTF-8 with BOM**。Windows PowerShell 5.1 会把无 BOM 的 UTF-8 中文路径读成乱码，表现为“Web 能起来，但日志目录不是预期路径”。
 
 停用自启：
@@ -202,6 +204,9 @@ Copy-Item "D:\Code\VSCode\BKLT365\niguang365\config.json" "$backup\config.json"
 |---|---|---|
 | 页面打不开 | `Invoke-RestMethod http://127.0.0.1:8501/api/health` | 看 Web 进程/端口；重新启动 |
 | 同步飞书报 `找不到 lark-cli` | `Test-Path` 配置里的 `feishu.cli_path`；直接执行该 exe `base record-list` | 把 `lark-cli.exe` 复制到状态目录并在 `config.json` 配置绝对路径；不要只依赖登录自启进程的 PATH |
+| 同步飞书报 `parse temporary token from Authorization fail` | `cli-env.json` 的临时 token 是否过期 | 当前 token 是一次性快照，不能长期复用；生产改用持久飞书应用凭据/OAuth profile，过渡验证可在有 Agent 会话时直接跑同步 |
+| 登录页提示“登录已失效”但密码已填 | 服务端 `/api/login` 返回 401 的 `message` | 密码错误现在会提示“密码不正确”；若页面仍是旧提示，强制刷新以加载新版 `app.js` |
+| 迁移组提示“飞书当前视图中已找不到此记录” | DB 中组 ID 是否仍是 `grp_...` | 同步会按周/摄影师/图名/提交日/附件数精确接入并改键为 record_id；改键后重复同步不再新建组 |
 | 登录后立刻失效 | 是否另一台设备登录 | 单会话设计；在新设备登录会撤销旧会话 |
 | 草稿失败 | CDP `/json/version`、创作者登录态 | 恢复 Chrome/CDP；重新生成草稿 |
 | 发布结果不确定 | 后台是否已有笔记 | 人工核对；不要重复点击 |

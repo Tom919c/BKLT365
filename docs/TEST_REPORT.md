@@ -25,7 +25,7 @@
 结果：
 
 ```text
-Ran 92 tests in 15.560s
+Ran 93 tests in 15.560s
 OK
 ```
 
@@ -37,7 +37,7 @@ OK
 - `test_v2.py`：新业务层（20 个）
 - `test_web.py`：旧 Web 受控发布/媒体流（13 个）
 - `test_migration.py`：新迁移工具（2 个）
-- 合计 92 个，全部通过。
+- 合计 93 个，全部通过。
 
 ## 3. v2 新增覆盖
 

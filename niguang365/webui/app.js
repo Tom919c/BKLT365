@@ -59,12 +59,18 @@
       ...options,
       body: options.body != null && typeof options.body !== "string" ? JSON.stringify(options.body) : options.body,
     });
-    if (response.status === 401) {
-      showLogin(true);
-      throw new Error("登录已失效，请重新登录");
-    }
     const contentType = response.headers.get("content-type") || "";
     const payload = contentType.includes("application/json") ? await response.json() : {};
+    if (response.status === 401) {
+      let message = payload.message;
+      if (!message && payload.detail) {
+        message = typeof payload.detail === "string" ? payload.detail : (payload.detail.message || JSON.stringify(payload.detail));
+      }
+      if (!path.startsWith("/api/login")) {
+        showLogin(true);
+      }
+      throw new Error(message || (path.startsWith("/api/login") ? "密码不正确" : "登录已失效，请重新登录"));
+    }
     if (!response.ok) {
       let message = payload.message;
       if (!message && payload.detail) {

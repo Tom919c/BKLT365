@@ -21,6 +21,7 @@ from niguang365.core.domain import (
     NamingConflict,
     STATUS_SELECTED,
     STATUS_UNSELECTED,
+    STATUS_COLLECTED,
     build_photo_name,
     compose_merged,
     compose_single,
@@ -355,6 +356,46 @@ class ServiceTests(unittest.TestCase):
         self.assertIn("第二行图说", group["quote"])
         names = [photo["name"] for photo in group["photos"]]
         self.assertEqual(names, ["20261109_邝俊_你看你的我看我的1.jpg", "20261109_邝俊_你看你的我看我的2.jpg"])
+
+    def test_sync_adopts_migrated_group_with_legacy_tokens(self):
+        week = self.service._ensure_week(week_for(date(2026, 11, 9)))
+        week_dir = Path(week.directory)
+        week_dir.mkdir(parents=True, exist_ok=True)
+        group = self.service.repo.create_group(
+            group_id="grp_legacy",
+            week_id=week.id,
+            photographer="邝俊",
+            title="你看你的我看我的",
+            quote="",
+            submitted_at=date(2026, 11, 9),
+        )
+        for index, remote in enumerate(self.fixture.groups[0].attachments, start=1):
+            name = build_photo_name(
+                title="你看你的我看我的",
+                photographer="邝俊",
+                submitted_date=date(2026, 11, 9),
+                index=index,
+                total=2,
+                status=STATUS_COLLECTED,
+                selected_date=None,
+                extension=remote.extension,
+            )
+            target = week_dir / name
+            shutil.copyfile(remote.source, target)
+            self.service.repo.add_photo(
+                group.id,
+                f"legacy:{remote.name}",
+                target,
+                remote.extension,
+                target.stat().st_size,
+                remote.name,
+            )
+        result = self.sync()
+        self.assertEqual(result["skipped"], [])
+        adopted = self.service.repo.get_group("rec-a")
+        self.assertIsNotNone(adopted)
+        self.assertEqual(len(adopted.photos), 2)
+        self.assertTrue(all(not photo.token.startswith("legacy:") for photo in adopted.photos))
 
     def test_select_changes_all_group_files_and_keeps_quote(self):
         self.sync()

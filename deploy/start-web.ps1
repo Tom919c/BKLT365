@@ -7,9 +7,24 @@ $python = 'C:\Users\chenquan\.workbuddy-ai\binaries\python\envs\xhs\Scripts\pyth
 $config = Join-Path $root 'niguang365\config.json'
 $logDir = 'D:\逆光365图片下载\.niguang365\logs'
 $healthUrl = 'http://127.0.0.1:8501/api/health'
+$cliEnvFile = 'D:\逆光365图片下载\.niguang365\tools\cli-env.json'
 
 if (-not (Test-Path -LiteralPath $logDir)) {
     New-Item -ItemType Directory -Force -Path $logDir | Out-Null
+}
+
+# lark-cli 需要豆包 Office 运行环境中的 token/proxy 变量；登录自启进程不会继承这些变量。
+if (Test-Path -LiteralPath $cliEnvFile) {
+    try {
+        $cliEnv = Get-Content -LiteralPath $cliEnvFile -Raw -Encoding UTF8 | ConvertFrom-Json
+        foreach ($property in $cliEnv.PSObject.Properties) {
+            if ($property.Value) {
+                Set-Item -Path "Env:$($property.Name)" -Value ([string]$property.Value)
+            }
+        }
+    } catch {
+        Add-Content -LiteralPath (Join-Path $logDir 'autostart.log') -Value "$(Get-Date -Format s) cli env load failed: $($_.Exception.Message)"
+    }
 }
 
 function Test-WebHealth {

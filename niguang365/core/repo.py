@@ -272,6 +272,22 @@ class Repository:
         with self.db.tx() as conn:
             conn.execute(f"UPDATE groups SET {columns} WHERE id = ?", (*fields.values(), group_id))
 
+    def rekey_group(self, old_id: str, new_id: str) -> None:
+        """把迁移生成的临时组 ID 接到飞书 record_id 上。
+
+        迁移工具在建组时拿不到飞书 record_id，只能生成 ``grp_...``；
+        同步时识别到同一投稿后用它改键，保留照片与备注关系。
+        """
+        with self.db.tx() as conn:
+            conn.execute("PRAGMA defer_foreign_keys = ON")
+            if not conn.execute("SELECT 1 FROM groups WHERE id = ?", (old_id,)).fetchone():
+                raise KeyError(old_id)
+            if conn.execute("SELECT 1 FROM groups WHERE id = ?", (new_id,)).fetchone():
+                raise ValueError(f"组 ID 已存在：{new_id}")
+            conn.execute("UPDATE groups SET id = ?, updated_at = ? WHERE id = ?", (new_id, utc_now(), old_id))
+            conn.execute("UPDATE photos SET group_id = ? WHERE group_id = ?", (new_id, old_id))
+            conn.execute("UPDATE note_groups SET group_id = ? WHERE group_id = ?", (new_id, old_id))
+
     def apply_rename(
         self,
         *,

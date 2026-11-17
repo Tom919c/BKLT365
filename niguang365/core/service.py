@@ -308,8 +308,46 @@ class Service:
         target_week = self._ensure_week(record_week)
         existing = self.repo.get_group(data.record_id)
         if not existing:
+            existing = self._adopt_legacy_group(target_week, data)
+        if not existing:
             return self._sync_new_group(target_week, data)
         return self._sync_existing_group(existing, target_week, data)
+
+    def _adopt_legacy_group(self, week: WeekRecord, data: Any) -> Group | None:
+        """把迁移生成的 ``grp_...`` 组接到真实飞书 record_id。
+
+        迁移时旧系统没有飞书记录 ID，只能生成临时组；如果不做这层识别，
+        每次同步都会把同一投稿当成新组，并因为同名文件拒绝覆盖而跳过。
+        仅在周、摄影师、图名、提交日完全一致且附件数量一致时配对，
+        不做模糊匹配，避免把两位作者的同名作品错误合并。
+        """
+        candidates = [
+            group
+            for group in self.repo.list_groups(week.id)
+            if group.photographer == data.photographer
+            and group.title == data.title
+            and group.submitted_at == data.submitted_at
+            and any(photo.token.startswith("legacy:") for photo in group.photos)
+        ]
+        if len(candidates) != 1:
+            return None
+        group = candidates[0]
+        if len(group.photos) != len(data.attachments):
+            return None
+        ordered = sorted(group.photos, key=lambda photo: photo.sort_order)
+        try:
+            self.repo.rekey_group(group.id, data.record_id)
+        except (KeyError, ValueError):
+            return None
+        for photo, remote in zip(ordered, data.attachments):
+            self.repo.update_photo(
+                photo.id,
+                token=remote.token,
+                original_name=remote.name,
+                ext=remote.extension,
+                remote_name=None,
+            )
+        return self.repo.get_group(data.record_id)
 
     def _sync_new_group(self, week: WeekRecord, data: Any) -> dict[str, Any]:
         week_dir = Path(week.directory)
